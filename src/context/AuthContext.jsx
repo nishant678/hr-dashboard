@@ -1,80 +1,113 @@
+// @refresh reset
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { AUTH_LOGIN } from "../config/endpoints";
 
 const AuthContext = createContext();
 
-const staticUsers = [
-  {
-    id: "superadmin@workbook.com",
-    password: "SuperAdmin123",
-    role: "superadmin",
-    name: "Super Admin"
-  },
-  {
-    id: "companyadmin@acme.com",
-    password: "CompanyAdmin123",
-    role: "companyadmin",
-    name: "Company Admin"
-  }
-];
+const USER_STORAGE_KEY = "hr_dashboard_user";
+const TOKEN_STORAGE_KEY = "hr_dashboard_token";
 
-export const AuthProvider = ({ children }) => {
+const normalizeRole = (role) => {
+  if (!role) return "user";
+  const normalized = String(role).trim().toLowerCase();
+  if (normalized === "master_admin" || normalized === "master admin" || normalized === "superadmin") {
+    return "superadmin";
+  }
+  if (normalized === "companyadmin" || normalized === "company admin") {
+    return "companyadmin";
+  }
+  return normalized;
+};
+
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("authUser");
+    const saved = localStorage.getItem(USER_STORAGE_KEY);
     if (saved) {
-      setUser(JSON.parse(saved));
+      const parsed = JSON.parse(saved);
+      setUser({
+        ...parsed,
+        role: normalizeRole(parsed.role)
+      });
     }
   }, []);
 
-  const login = (id, password) => {
-    const matched = staticUsers.find(
-      (item) => item.id === id && item.password === password
-    );
-
-    if (!matched) {
-      return { success: false, message: "Invalid credentials. Use the sample Super Admin / Company Admin ID." };
+  const login = async (email, password) => {
+    if (!email || !password) {
+      return { success: false, message: "Please enter both email and password." };
     }
 
-    const userData = {
-      id: matched.id,
-      role: matched.role,
-      name: matched.name
-    };
+    try {
+      const response = await fetch(AUTH_LOGIN, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, password })
+      });
 
-    localStorage.setItem("authUser", JSON.stringify(userData));
-    setUser(userData);
-    return { success: true, user: userData };
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message = data?.message || "Login failed. Check your credentials and try again.";
+        return { success: false, message };
+      }
+
+      const userData = {
+        id: data.id,
+        email: data.email || email,
+        role: normalizeRole(data.role),
+        name: data.name || data.email || "User",
+        token: data.token || null
+      };
+
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+      if (userData.token) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, userData.token);
+      }
+      setUser(userData);
+
+      return { success: true, user: userData };
+    } catch (error) {
+      return {
+        success: false,
+        message: "Unable to connect to the login service. Please try again later."
+      };
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem("authUser");
+    localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
     setUser(null);
   };
 
   const register = ({ name, email, role }) => {
     const userData = {
       id: email,
-      role,
-      name
+      email,
+      role: normalizeRole(role),
+      name,
+      token: null
     };
 
-    localStorage.setItem("authUser", JSON.stringify(userData));
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
     setUser(userData);
     return { success: true, user: userData };
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register }}>
+    <AuthContext.Provider value={{ user, token: user?.token, login, logout, register }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
-};
+}

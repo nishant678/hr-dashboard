@@ -73,8 +73,8 @@ const CompanySidebar = ({ isOpen, toggle }) => {
                                     }}
                                     className={({ isActive }) => `
                                         flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group relative
-                                        ${isActive 
-                                            ? "bg-workbook-dark/10 text-workbook-dark font-medium" 
+                                        ${isActive
+                                            ? "bg-workbook-dark/10 text-workbook-dark font-medium"
                                             : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}
                                     `}
                                 >
@@ -109,11 +109,11 @@ const CompanySidebar = ({ isOpen, toggle }) => {
                                                     to={subItem.path}
                                                     onClick={() => window.innerWidth < 1024 && toggle()}
                                                     className={({ isActive }) => `
-                                                        flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all
-                                                        ${isActive
+                                                            flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all
+                                                            ${isActive
                                                             ? "bg-workbook-dark/5 text-workbook-dark font-medium border-l-2 border-workbook-dark pl-3"
                                                             : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"}
-                                                    `}
+                                                        `}
                                                 >
                                                     {subItem.name}
                                                 </NavLink>

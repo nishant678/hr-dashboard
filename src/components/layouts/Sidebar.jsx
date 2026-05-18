@@ -2,20 +2,20 @@ import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
-import { 
-    LayoutDashboard, 
-    Building2, 
-    Users, 
-    CreditCard, 
-    ArrowLeftRight, 
-    FileBarChart, 
-    Ticket, 
-    Settings, 
-    AppWindow, 
-    Bell, 
-    History, 
-    ShieldCheck, 
-    RotateCcw, 
+import {
+    LayoutDashboard,
+    Building2,
+    Users,
+    CreditCard,
+    ArrowLeftRight,
+    FileBarChart,
+    Ticket,
+    Settings,
+    AppWindow,
+    Bell,
+    History,
+    ShieldCheck,
+    RotateCcw,
     Puzzle,
     LogOut,
     ChevronRight
@@ -80,7 +80,7 @@ const Sidebar = ({ isOpen, toggle }) => {
                 `}
             >
                 <div className="p-4">
-                            <img src={workBookLogo} alt="WorkBook logo" className="w-full h-full object-contain" />
+                    <img src={workBookLogo} alt="WorkBook logo" className="w-full h-full object-contain" />
                 </div>
 
                 {/* Menu */}
@@ -92,8 +92,8 @@ const Sidebar = ({ isOpen, toggle }) => {
                             onClick={() => window.innerWidth < 1024 && toggle()}
                             className={({ isActive }) => `
                                 flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group
-                                ${isActive 
-                                    ? "bg-workbook-dark/10 text-workbook-dark font-medium" 
+                                ${isActive
+                                    ? "bg-workbook-dark/10 text-workbook-dark font-medium"
                                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}
                             `}
                         >
@@ -113,9 +113,9 @@ const Sidebar = ({ isOpen, toggle }) => {
                 <div className="p-4 border-t border-slate-100 space-y-4">
                     <div className="flex items-center gap-3 px-2">
                         <div className="relative">
-                            <img 
-                                src="https://i.pravatar.cc/150?u=amit" 
-                                alt="User" 
+                            <img
+                                src="https://i.pravatar.cc/150?u=amit"
+                                alt="User"
                                 className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
                             />
                             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
@@ -125,7 +125,7 @@ const Sidebar = ({ isOpen, toggle }) => {
                             <p className="text-xs text-slate-500 truncate">Super Admin</p>
                         </div>
                     </div>
-                    
+
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 px-4 py-2 text-red-500 hover:bg-red-50 w-full rounded-lg transition-colors group"

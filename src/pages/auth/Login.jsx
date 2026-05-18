@@ -7,7 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 const Login = () => {
   const { user, login } = useAuth();
   const navigate = useNavigate();
-  const [credentials, setCredentials] = useState({ id: "", password: "" });
+  const [credentials, setCredentials] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -23,9 +23,12 @@ const Login = () => {
     setError("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = login(credentials.id.trim(), credentials.password.trim());
+    const email = credentials.email.trim().replace(/\^@/g, "@");
+    const password = credentials.password.trim();
+
+    const result = await login(email, password);
     if (!result.success) {
       setError(result.message);
       return;
@@ -47,11 +50,11 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4">
             <label className="flex items-center gap-3 text-sm font-medium text-slate-700">
-              <Mail size={18} /> Email or User ID
+              <Mail size={18} /> Email
             </label>
             <input
-              value={credentials.id}
-              onChange={(e) => handleChange("id", e.target.value)}
+              value={credentials.email}
+              onChange={(e) => handleChange("email", e.target.value)}
               placeholder="superadmin@workbook.com"
               className="mt-3 w-full bg-transparent text-slate-900 outline-none"
             />
