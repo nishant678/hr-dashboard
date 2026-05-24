@@ -10,10 +10,20 @@ const TOKEN_STORAGE_KEY = "hr_dashboard_token";
 const normalizeRole = (role) => {
   if (!role) return "user";
   const normalized = String(role).trim().toLowerCase();
-  if (normalized === "master_admin" || normalized === "master admin" || normalized === "superadmin") {
+  if (
+    normalized === "master_admin" ||
+    normalized === "master admin" ||
+    normalized === "masteradmin" ||
+    normalized === "superadmin" ||
+    normalized === "super_admin"
+  ) {
     return "superadmin";
   }
-  if (normalized === "companyadmin" || normalized === "company admin") {
+  if (
+    normalized === "companyadmin" ||
+    normalized === "company admin" ||
+    normalized === "company_admin"
+  ) {
     return "companyadmin";
   }
   return normalized;

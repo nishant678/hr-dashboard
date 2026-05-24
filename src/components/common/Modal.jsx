@@ -2,7 +2,14 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
-const Modal = ({ isOpen, onClose, title, children }) => {
+const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
+    const sizeClasses = {
+        sm: "max-w-md",
+        md: "max-w-lg",
+        lg: "max-w-2xl",
+        xl: "max-w-4xl"
+    };
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -21,7 +28,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
                         initial={{ scale: 0.95, opacity: 0, y: 20 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                        className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden z-10"
+                        className={`relative w-full ${sizeClasses[size]} bg-white rounded-2xl shadow-2xl overflow-hidden z-10`}
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">

@@ -1,63 +1,241 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-    Search, 
-    Filter, 
-    Plus, 
-    MoreHorizontal, 
-    Building2, 
-    Globe, 
-    Mail, 
-    Users as UsersIcon, 
-    ChevronLeft, 
-    ChevronRight 
+import {
+    Search,
+    Filter,
+    Plus,
+    MoreHorizontal,
+    Building2,
+    Globe,
+    Mail,
+    Users as UsersIcon,
+    ChevronLeft,
+    ChevronRight
 } from "lucide-react";
 import Modal from "../../../components/common/Modal";
 import { useHeader } from "../../../context/HeaderContext";
+import { useAuth } from "../../../context/AuthContext";
+import { withBase } from "../../../config/apiConfig";
 
 const Companies = () => {
     const { setHeaderData } = useHeader();
+    const { token } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
+    const [companies, setCompanies] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState("");
+    const [form, setForm] = useState({
+        companyName: "",
+        ownerName: "",
+        email: "",
+        phone: "",
+        website: "",
+        logoUrl: "",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        state: "",
+        country: "",
+        postalCode: "",
+        gstNumber: "",
+        panNumber: "",
+        subscriptionPlan: "TRIAL",
+        employeeLimit: 0,
+        subscriptionStart: "",
+        subscriptionEnd: "",
+        timezone: "(GMT+05:30) Asia/Kolkata",
+        currency: "INR",
+        attendanceMandatory: true,
+        autoEmailReports: true,
+        adminFirstName: "",
+        adminLastName: "",
+        adminEmail: "",
+        adminPhone: "",
+        adminPassword: ""
+    });
+
+    const buildAddress = () => {
+        const addressParts = [form.addressLine1, form.addressLine2].filter(Boolean);
+        return addressParts.join(", ");
+    };
+
+    const fetchCompanies = async () => {
+        if (!token) return;
+        setIsLoading(true);
+        try {
+            const response = await fetch(withBase("/api/super-admin/companies"), {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if (!response.ok) throw new Error("Failed to load companies");
+            const data = await response.json();
+            setCompanies(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error(error);
+            setCompanies([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         setHeaderData({
             title: "Companies",
             description: "Manage all registered companies in the system.",
             actions: (
-                <button 
+                <button
                     onClick={() => setIsModalOpen(true)}
-                    className="flex items-center justify-center gap-2 bg-workbook-dark hover:bg-workbook-light text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-lg active:scale-95" style={{boxShadow: '0 4px 12px rgba(31, 71, 136, 0.3)'}}
+                    className="flex items-center justify-center gap-2 bg-workbook-dark hover:bg-workbook-light text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-lg active:scale-95" style={{ boxShadow: '0 4px 12px rgba(31, 71, 136, 0.3)' }}
                 >
                     <Plus size={18} />
                     <span>Add Company</span>
                 </button>
             )
         });
-    }, [setHeaderData, setIsModalOpen]);
+        fetchCompanies();
+    }, [setHeaderData, token]);
 
-    const companies = [
-        { id: 1, name: "Tech Solutions", admin: "Rahul Verma", email: "rahul@tech.com", users: 45, plan: "Premium", status: "Active", date: "Apr 25, 2024" },
-        { id: 2, name: "ABC Pvt Ltd", admin: "Priya Mehta", email: "priya@abc.com", users: 120, plan: "Enterprise", status: "Active", date: "Apr 20, 2024" },
-        { id: 3, name: "XYZ Corp", admin: "Sandeep Kumar", email: "sandeep@xyz.com", users: 80, plan: "Standard", status: "Expiring Soon", date: "Apr 18, 2024" },
-        { id: 4, name: "Global Ltd", admin: "Neha Singh", email: "neha@global.com", users: 60, plan: "Standard", status: "Expired", date: "Apr 15, 2024" },
-        { id: 5, name: "Innovatech", admin: "Vikram Patel", email: "vikram@inno.com", users: 30, plan: "Basic", status: "Active", date: "Apr 12, 2024" },
-        { id: 6, name: "SoftHub", admin: "Ankit Gupta", email: "ankit@softhub.com", users: 25, plan: "Basic", status: "Active", date: "Apr 10, 2024" },
-        { id: 7, name: "Bright Minds", admin: "Pooja Shah", email: "pooja@bright.com", users: 15, plan: "Basic", status: "Active", date: "Apr 05, 2024" },
-        { id: 8, name: "Future Systems", admin: "Rohit Yadav", email: "rohit@future.com", users: 10, plan: "Standard", status: "Expiring Soon", date: "Apr 01, 2024" },
-    ];
+    const filteredCompanies = companies.filter(company => {
+        const term = searchTerm.toLowerCase();
+        return (
+            (company.companyName || company.name || "").toLowerCase().includes(term) ||
+            (company.ownerName || "").toLowerCase().includes(term) ||
+            (`${company.adminFirstName || ''} ${company.adminLastName || ''}`.toLowerCase().includes(term)) ||
+            ((company.email || company.adminEmail || "").toLowerCase().includes(term))
+        );
+    });
 
-    const getStatusStyle = (status) => {
-        switch (status) {
-            case "Active": return "bg-green-50 text-green-600";
-            case "Expiring Soon": return "bg-orange-50 text-orange-600";
-            case "Expired": return "bg-red-50 text-red-600";
-            default: return "bg-slate-50 text-slate-600";
+    const handleChange = (key, value) => {
+        setForm(prev => ({ ...prev, [key]: value }));
+    };
+
+    const parseApiError = async (response) => {
+        const errorData = await response.json().catch(() => null);
+        if (!errorData) return response.statusText || "Unable to create company.";
+        if (errorData.message) return errorData.message;
+        if (errorData.error) {
+            const duplicateMatch = /Key \(([^)]+)\)=\(([^)]+)\)/.exec(errorData.error);
+            if (duplicateMatch) {
+                return `A company with this ${duplicateMatch[1]} already exists.`;
+            }
+            return errorData.error;
+        }
+        return JSON.stringify(errorData);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (isSubmitting) return;
+
+        setSubmitError("");
+        if (!form.companyName || !form.ownerName || !form.email || !form.phone || !form.adminFirstName || !form.adminEmail || !form.adminPassword) {
+            setSubmitError("Please complete all required fields before saving a company.");
+            return;
+        }
+
+        if (companies.some((company) => company.phone === form.phone)) {
+            setSubmitError("A company with this phone number already exists.");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const payload = {
+                companyName: form.companyName,
+                ownerName: form.ownerName,
+                email: form.email,
+                phone: form.phone,
+                website: form.website,
+                logoUrl: form.logoUrl,
+                address: buildAddress(),
+                city: form.city,
+                state: form.state,
+                country: form.country,
+                postalCode: form.postalCode,
+                gstNumber: form.gstNumber,
+                panNumber: form.panNumber,
+                subscriptionPlan: form.subscriptionPlan,
+                employeeLimit: Number(form.employeeLimit),
+                subscriptionStart: form.subscriptionStart,
+                subscriptionEnd: form.subscriptionEnd,
+                timezone: form.timezone,
+                currency: form.currency,
+                attendanceMandatory: form.attendanceMandatory,
+                autoEmailReports: form.autoEmailReports,
+                adminFirstName: form.adminFirstName,
+                adminLastName: form.adminLastName,
+                adminEmail: form.adminEmail,
+                adminPhone: form.adminPhone,
+                adminPassword: form.adminPassword
+            };
+
+            const response = await fetch(withBase("/api/super-admin/create-companies"), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const message = await parseApiError(response);
+                throw new Error(message || "Failed to create company");
+            }
+
+            await fetchCompanies();
+            setIsModalOpen(false);
+            setForm(prev => ({
+                ...prev,
+                companyName: "",
+                ownerName: "",
+                email: "",
+                phone: "",
+                website: "",
+                logoUrl: "",
+                addressLine1: "",
+                addressLine2: "",
+                city: "",
+                state: "",
+                country: "",
+                postalCode: "",
+                gstNumber: "",
+                panNumber: "",
+                subscriptionPlan: "TRIAL",
+                employeeLimit: 0,
+                subscriptionStart: "",
+                subscriptionEnd: "",
+                timezone: "(GMT+05:30) Asia/Kolkata",
+                currency: "INR",
+                attendanceMandatory: true,
+                autoEmailReports: true,
+                adminFirstName: "",
+                adminLastName: "",
+                adminEmail: "",
+                adminPhone: "",
+                adminPassword: ""
+            }));
+        } catch (error) {
+            console.error(error);
+            setSubmitError(error?.message || "Unable to create company. Please try again.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
+    const getStatusStyle = (status) => {
+        const s = (status || "").toString().toLowerCase();
+        if (s.includes("active")) return "bg-green-50 text-green-600";
+        if (s.includes("expiring") || s.includes("soon")) return "bg-orange-50 text-orange-600";
+        if (s.includes("expired")) return "bg-red-50 text-red-600";
+        return "bg-slate-50 text-slate-600";
+    };
+
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
@@ -66,9 +244,9 @@ const Companies = () => {
             <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                        type="text" 
-                        placeholder="Search company..." 
+                    <input
+                        type="text"
+                        placeholder="Search company..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-workbook-dark/20 transition-all font-medium"
@@ -99,39 +277,63 @@ const Companies = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {companies.map((company) => (
-                                <tr key={company.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-workbook-dark/10 text-workbook-dark flex items-center justify-center font-bold">
-                                                {company.name.charAt(0)}
-                                            </div>
-                                            <span className="font-semibold text-slate-700">{company.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-600 font-medium">{company.admin}</td>
-                                    <td className="px-6 py-4 text-slate-500">{company.email}</td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold text-xs">
-                                            {company.users}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-slate-700 font-medium">{company.plan}</span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(company.status)}`}>
-                                            {company.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-500">{company.date}</td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200">
-                                            <MoreHorizontal size={16} className="text-slate-400" />
-                                        </button>
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
+                                        Loading companies...
                                     </td>
                                 </tr>
-                            ))}
+                            ) : filteredCompanies.length > 0 ? (
+                                filteredCompanies.map((company) => {
+                                    const name = company.companyName || company.name || "Unknown";
+                                    const adminName = `${company.adminFirstName || ""} ${company.adminLastName || ""}`.trim() || company.ownerName || "—";
+                                    const email = company.adminEmail || company.email || "—";
+                                    const users = company.employeeLimit ?? 0;
+                                    const plan = company.subscriptionPlan || company.plan || "N/A";
+                                    const status = company.status || "Active";
+                                    const date = company.subscriptionStart || company.date || "—";
+
+                                    return (
+                                        <tr key={company.id || name} className="hover:bg-slate-50/50 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-lg bg-workbook-dark/10 text-workbook-dark flex items-center justify-center font-bold">
+                                                        {name.charAt(0)}
+                                                    </div>
+                                                    <span className="font-semibold text-slate-700">{name}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-600 font-medium">{adminName}</td>
+                                            <td className="px-6 py-4 text-slate-500">{email}</td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold text-xs">
+                                                    {users}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-slate-700 font-medium">{plan}</span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(status)}`}>
+                                                    {status}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-500">{date}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200">
+                                                    <MoreHorizontal size={16} className="text-slate-400" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            ) : (
+                                <tr>
+                                    <td colSpan={8} className="px-6 py-8 text-center text-slate-500">
+                                        No companies found.
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -154,57 +356,358 @@ const Companies = () => {
             </div>
 
             {/* Add Company Modal */}
-            <Modal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
                 title="Add New Company"
+                size="xl"
             >
-                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setIsModalOpen(false); }}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Company Name</label>
-                            <input type="text" placeholder="Enter company name" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700" />
+                <form className="space-y-6 max-h-[70vh] overflow-y-auto" onSubmit={handleSubmit}>
+                    {submitError && (
+                        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3">
+                            <p className="font-semibold">Unable to create company</p>
+                            <p className="text-sm mt-1 whitespace-pre-wrap">{submitError}</p>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Admin Name</label>
-                            <input type="text" placeholder="Enter admin name" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700" />
+                    )}
+                    {/* Basic Information Section */}
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-800 mb-4">Basic Information</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Company Name <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.companyName}
+                                    onChange={(e) => handleChange("companyName", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter company name"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Owner Name <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.ownerName}
+                                    onChange={(e) => handleChange("ownerName", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter owner name"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Company Email <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.email}
+                                    onChange={(e) => handleChange("email", e.target.value)}
+                                    type="email"
+                                    placeholder="company@example.com"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Company Phone <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.phone}
+                                    onChange={(e) => handleChange("phone", e.target.value)}
+                                    type="tel"
+                                    placeholder="Enter phone number"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Website</label>
+                                <input
+                                    value={form.website}
+                                    onChange={(e) => handleChange("website", e.target.value)}
+                                    type="url"
+                                    placeholder="https://www.example.com"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Logo URL</label>
+                                <input
+                                    value={form.logoUrl}
+                                    onChange={(e) => handleChange("logoUrl", e.target.value)}
+                                    type="url"
+                                    placeholder="Enter logo URL"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">GST Number</label>
+                                <input
+                                    value={form.gstNumber}
+                                    onChange={(e) => handleChange("gstNumber", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter GST number"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">PAN Number</label>
+                                <input
+                                    value={form.panNumber}
+                                    onChange={(e) => handleChange("panNumber", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter PAN number"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Email Address</label>
-                        <input type="email" placeholder="example@company.com" className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700" />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Select Plan</label>
-                            <select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700">
-                                <option>Basic</option>
-                                <option>Standard</option>
-                                <option>Premium</option>
-                                <option>Enterprise</option>
-                            </select>
+
+                    {/* Address Information Section */}
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-800 mb-4">Address Information</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Address Line 1 <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.addressLine1}
+                                    onChange={(e) => handleChange("addressLine1", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter address line 1"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Address Line 2</label>
+                                <input
+                                    value={form.addressLine2}
+                                    onChange={(e) => handleChange("addressLine2", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter address line 2 (optional)"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Country <span className="text-red-500">*</span></label>
+                                <select
+                                    value={form.country}
+                                    onChange={(e) => handleChange("country", e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                >
+                                    <option value="">Select country</option>
+                                    <option>India</option>
+                                    <option>USA</option>
+                                    <option>UK</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">State / Province <span className="text-red-500">*</span></label>
+                                <select
+                                    value={form.state}
+                                    onChange={(e) => handleChange("state", e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                >
+                                    <option value="">Select state / province</option>
+                                    <option>Karnataka</option>
+                                    <option>Maharashtra</option>
+                                    <option>Delhi</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">City <span className="text-red-500">*</span></label>
+                                <select
+                                    value={form.city}
+                                    onChange={(e) => handleChange("city", e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                >
+                                    <option value="">Select city</option>
+                                    <option>Bangalore</option>
+                                    <option>Mumbai</option>
+                                    <option>Delhi</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">ZIP / Postal Code <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.postalCode}
+                                    onChange={(e) => handleChange("postalCode", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter zip / postal code"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700">Status</label>
-                            <select className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700">
-                                <option>Active</option>
-                                <option>Pending</option>
-                            </select>
+                    </div>
+
+                    {/* Admin Information Section */}
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-800 mb-4">Admin Information</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Admin First Name <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.adminFirstName}
+                                    onChange={(e) => handleChange("adminFirstName", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter admin first name"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Admin Last Name <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.adminLastName}
+                                    onChange={(e) => handleChange("adminLastName", e.target.value)}
+                                    type="text"
+                                    placeholder="Enter admin last name"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Admin Email <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.adminEmail}
+                                    onChange={(e) => handleChange("adminEmail", e.target.value)}
+                                    type="email"
+                                    placeholder="admin@example.com"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Admin Phone <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.adminPhone}
+                                    onChange={(e) => handleChange("adminPhone", e.target.value)}
+                                    type="tel"
+                                    placeholder="Enter phone number"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Admin Password <span className="text-red-500">*</span></label>
+                                <input
+                                    value={form.adminPassword}
+                                    onChange={(e) => handleChange("adminPassword", e.target.value)}
+                                    type="password"
+                                    placeholder="Enter password"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
                         </div>
                     </div>
+
+                    {/* Additional Information Section */}
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-800 mb-4">Additional Information</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Subscription Plan <span className="text-red-500">*</span></label>
+                                <select
+                                    value={form.subscriptionPlan}
+                                    onChange={(e) => handleChange("subscriptionPlan", e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                >
+                                    <option value="TRIAL">TRIAL</option>
+                                    <option value="BASIC">BASIC</option>
+                                    <option value="STANDARD">STANDARD</option>
+                                    <option value="PREMIUM">PREMIUM</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Employee Limit</label>
+                                <input
+                                    value={form.employeeLimit}
+                                    onChange={(e) => handleChange("employeeLimit", e.target.value)}
+                                    type="number"
+                                    min="0"
+                                    placeholder="0"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Currency <span className="text-red-500">*</span></label>
+                                <select
+                                    value={form.currency}
+                                    onChange={(e) => handleChange("currency", e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                >
+                                    <option value="INR">INR (₹)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Timezone <span className="text-red-500">*</span></label>
+                                <select
+                                    value={form.timezone}
+                                    onChange={(e) => handleChange("timezone", e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                >
+                                    <option>(GMT+05:30) Asia/Kolkata</option>
+                                    <option>(GMT-05:00) America/New_York</option>
+                                    <option>(GMT+00:00) Europe/London</option>
+                                    <option>(GMT+08:00) Asia/Singapore</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Subscription Start</label>
+                                <input
+                                    value={form.subscriptionStart}
+                                    onChange={(e) => handleChange("subscriptionStart", e.target.value)}
+                                    type="date"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Subscription End</label>
+                                <input
+                                    value={form.subscriptionEnd}
+                                    onChange={(e) => handleChange("subscriptionEnd", e.target.value)}
+                                    type="date"
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                />
+                            </div>
+                            <div className="space-y-2 flex items-center gap-3 mt-6">
+                                <input
+                                    id="attendanceMandatory"
+                                    type="checkbox"
+                                    checked={form.attendanceMandatory}
+                                    onChange={(e) => handleChange("attendanceMandatory", e.target.checked)}
+                                    className="w-4 h-4 rounded border-slate-300 text-workbook-dark focus:ring-workbook-dark"
+                                />
+                                <label htmlFor="attendanceMandatory" className="text-sm font-medium text-slate-700">Attendance Mandatory</label>
+                            </div>
+                            <div className="space-y-2 flex items-center gap-3 mt-6">
+                                <input
+                                    id="autoEmailReports"
+                                    type="checkbox"
+                                    checked={form.autoEmailReports}
+                                    onChange={(e) => handleChange("autoEmailReports", e.target.checked)}
+                                    className="w-4 h-4 rounded border-slate-300 text-workbook-dark focus:ring-workbook-dark"
+                                />
+                                <label htmlFor="autoEmailReports" className="text-sm font-medium text-slate-700">Auto Email Reports</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Checkbox */}
+                    <div className="flex items-start gap-3 pt-4 border-t border-slate-100">
+                        <input type="checkbox" id="terms" className="mt-1 w-4 h-4 rounded cursor-pointer" defaultChecked />
+                        <label htmlFor="terms" className="text-sm text-slate-600 cursor-pointer">
+                            I confirm that the above information is correct and I agree to the <a href="#" className="text-blue-500 hover:underline">Terms & Conditions</a>.
+                        </label>
+                    </div>
+
+                    {/* Action Buttons */}
                     <div className="pt-4 flex gap-3">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={() => setIsModalOpen(false)}
                             className="flex-1 px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             type="submit"
-                            className="flex-1 px-4 py-3 bg-workbook-dark text-white font-bold rounded-xl hover:bg-workbook-light shadow-lg transition-all active:scale-95" style={{boxShadow: '0 4px 12px rgba(31, 71, 136, 0.3)'}}
+                            disabled={isSubmitting}
+                            className={`flex-1 px-4 py-3 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-workbook-dark hover:bg-workbook-light'}`}
+                            style={!isSubmitting ? { boxShadow: '0 4px 12px rgba(31, 71, 136, 0.3)' } : {}}
                         >
-                            Save Company
+                            {isSubmitting ? 'Saving...' : 'Save Company'}
                         </button>
                     </div>
                 </form>
