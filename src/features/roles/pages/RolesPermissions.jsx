@@ -1,111 +1,217 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-    Plus, 
-    Shield, 
-    ShieldAlert, 
-    ShieldCheck, 
-    Users, 
-    Settings, 
-    MoreHorizontal,
-    Edit3,
-    Trash2
+import {
+    ShieldCheck,
+    Shield,
+    Users,
+    CalendarDays,
+    CreditCard,
+    Briefcase,
+    Layers,
+    Bell,
+    BarChart2,
+    MapPin,
+    MessageSquare,
+    CheckCircle2
 } from "lucide-react";
-import { useHeader } from "../../../context/HeaderContext";
+import { useAuth } from "../../../context/AuthContext";
+import { withBase } from "../../../config/apiConfig";
+
+const moduleItems = [
+    { id: 1, title: "Employee Management", description: "Manage employees, profiles, departments and designations.", features: "12 Features", icon: Users },
+    { id: 2, title: "Attendance", description: "Track attendance, shifts, holidays and overtime.", features: "9 Features", icon: CalendarDays },
+    { id: 3, title: "Leave Management", description: "Manage leave policies, applications and approvals.", features: "8 Features", icon: CheckCircle2 },
+    { id: 4, title: "Payroll", description: "Process payroll, salary components, tax and payslips.", features: "15 Features", icon: CreditCard },
+    { id: 5, title: "Asset Management", description: "Track and manage company assets and inventory.", features: "6 Features", icon: Layers },
+    { id: 6, title: "Recruitment", description: "Job postings, applicants, interviews and hiring.", features: "10 Features", icon: Briefcase },
+    { id: 7, title: "Task Management", description: "Assign tasks, track progress and deadlines.", features: "8 Features", icon: MapPin },
+    { id: 8, title: "Expense Management", description: "Track and manage employee expenses.", features: "6 Features", icon: CreditCard },
+    { id: 9, title: "Reports & Analytics", description: "Generate detailed reports and analytics.", features: "20+ Reports", icon: BarChart2 },
+    { id: 10, title: "Notice Board", description: "Company announcements and notifications.", features: "3 Features", icon: Bell },
+    { id: 11, title: "Chat & Communication", description: "Team chat, announcements and messages.", features: "4 Features", icon: MessageSquare },
+    { id: 12, title: "GPS Attendance", description: "Enable location-based attendance tracking.", features: "3 Features", icon: MapPin }
+];
 
 const RolesPermissions = () => {
-    const { setHeaderData } = useHeader();
+    const { token } = useAuth();
+    const [companies, setCompanies] = useState([]);
+    const [selectedCompanyId, setSelectedCompanyId] = useState(null);
+    const [activeTab, setActiveTab] = useState("module");
+    const [enabledModules, setEnabledModules] = useState(moduleItems.map((module) => module.id));
+
+    const fetchCompanies = async () => {
+        if (!token) return;
+
+        try {
+            const response = await fetch(withBase("/api/super-admin/companies"), {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if (!response.ok) throw new Error("Failed to load companies");
+
+            const data = await response.json();
+            const companyList = Array.isArray(data) ? data : [];
+            setCompanies(companyList);
+            if (!selectedCompanyId && companyList.length > 0) {
+                setSelectedCompanyId(companyList[0].id ?? companyList[0].companyId ?? null);
+            }
+        } catch (error) {
+            console.error("Failed to fetch companies:", error);
+            setCompanies([]);
+        }
+    };
 
     useEffect(() => {
-        setHeaderData({
-            title: "Role & Permissions",
-            description: "Manage roles and permissions for the system.",
-            actions: (
-                <button className="flex items-center justify-center gap-2 bg-workbook-dark hover:bg-workbook-light text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-lg active:scale-95" style={{boxShadow: '0 4px 12px rgba(31, 71, 136, 0.3)'}}>
-                    <Plus size={18} />
-                    <span>Add Role</span>
-                </button>
-            )
-        });
-    }, [setHeaderData]);
+        fetchCompanies();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [token]);
 
-    const roles = [
-        { id: 1, name: "Super Admin", users: 1, desc: "Full access to the entire system and all companies.", status: "System Role" },
-        { id: 2, name: "Company Admin", users: 24, desc: "Manage specific company and its users, settings, and reports.", status: "Custom Role" },
-        { id: 3, name: "HR Manager", users: 50, desc: "Manage employees, leave, and attendance within a company.", status: "Custom Role" },
-        { id: 4, name: "Employee", users: 1200, desc: "Basic employee access to own portal and attendance.", status: "System Role" },
-    ];
+    const selectedCompany = companies.find((company) => String(company.id ?? company.companyId) === String(selectedCompanyId));
+    const selectedCompanyName = selectedCompany?.companyName || selectedCompany?.name || "ABC Pvt. Ltd.";
+
+    const handleToggleModule = (id) => {
+        setEnabledModules(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+    };
+
+    const handleEnableAll = () => setEnabledModules(moduleItems.map((module) => module.id));
+    const handleDisableAll = () => setEnabledModules([]);
 
     return (
-        <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
-        >
-            {/* Roles Table */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead>
-                            <tr className="bg-slate-50/50 text-slate-500 border-b border-slate-100">
-                                <th className="px-8 py-4 font-semibold uppercase tracking-wider">Role Name</th>
-                                <th className="px-8 py-4 font-semibold uppercase tracking-wider text-center">Users</th>
-                                <th className="px-8 py-4 font-semibold uppercase tracking-wider">Description</th>
-                                <th className="px-8 py-4 font-semibold uppercase tracking-wider text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {roles.map((role) => (
-                                <tr key={role.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="px-8 py-6">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-2 rounded-lg ${role.name === "Super Admin" ? "bg-red-50 text-red-600" : "bg-workbook-dark/10 text-workbook-dark"}`}>
-                                                <Shield size={18} />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-slate-700">{role.name}</p>
-                                                <p className={`text-[10px] font-bold uppercase tracking-wider ${role.status === "System Role" ? "text-slate-400" : "text-orange-500"}`}>
-                                                    {role.status}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6 text-center">
-                                        <div className="flex items-center justify-center gap-1.5 font-bold text-slate-600">
-                                            <Users size={14} className="text-slate-300" />
-                                            {role.users}
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-6 text-slate-500 max-w-sm font-medium">
-                                        {role.desc}
-                                    </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200 text-workbook-dark font-bold text-xs uppercase">
-                                                Manage Permissions
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="w-full lg:w-72">
+                        <label className="block text-sm font-medium text-slate-600 mb-2">Select Company</label>
+                        <select
+                            value={selectedCompanyId ?? ""}
+                            onChange={(e) => setSelectedCompanyId(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-700 focus:border-workbook-dark focus:outline-none focus:ring-2 focus:ring-workbook-dark/20"
+                        >
+                            <option value="">Select Company</option>
+                            {companies.map((company) => (
+                                <option key={company.id ?? company.companyId} value={company.id ?? company.companyId}>
+                                    {company.companyName || company.name || "Unnamed Company"}
+                                </option>
                             ))}
-                        </tbody>
-                    </table>
+                        </select>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                            <p className="text-sm text-slate-500">Plan</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900">Professional</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                            <p className="text-sm text-slate-500">Employees</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900">120</p>
+                        </div>
+                        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                            <p className="text-sm text-slate-500">Valid Till</p>
+                            <p className="mt-2 text-lg font-bold text-slate-900">31 Dec 2025</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Note Section */}
-            <div className="p-6 bg-workbook-dark/5 rounded-2xl border border-workbook-dark/20">
-                <div className="flex gap-4">
-                    <div className="p-3 bg-workbook-dark/10 text-workbook-dark rounded-xl h-fit">
-                        <ShieldCheck size={24} />
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-3">
+                        <p className="text-sm uppercase tracking-[0.2em] text-slate-400">{selectedCompanyName}</p>
+                        <div className="rounded-3xl bg-slate-50 p-5 shadow-sm">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-slate-900">{selectedCompanyName}</h1>
+                                    <p className="text-sm text-slate-500">{selectedCompany?.adminEmail || selectedCompany?.email || "admin@company.com"}</p>
+                                    <p className="text-sm text-slate-500">{selectedCompany?.phone || selectedCompany?.adminPhone || "+91 98765 43210"}</p>
+                                </div>
+                                <span className="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-xs font-semibold text-emerald-700">
+                                    <ShieldCheck size={16} />
+                                    Active
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <h4 className="font-bold text-workbook-dark">Permission Management Tips</h4>
-                        <p className="text-sm text-workbook-dark/80 mt-1 leading-relaxed font-medium">
-                            System roles are pre-defined and cannot be deleted. Custom roles can be edited and deleted as needed. 
-                            Always double-check permissions before assigning a role to a large group of users.
-                        </p>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <button onClick={handleEnableAll} className="rounded-2xl bg-workbook-dark px-5 py-3 text-sm font-semibold text-white hover:bg-workbook-light transition-all">
+                            Enable All
+                        </button>
+                        <button onClick={handleDisableAll} className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-all">
+                            Disable All
+                        </button>
                     </div>
+                </div>
+
+                <div className="mt-6 border-b border-slate-100 pb-4">
+                    <nav className="flex gap-3 overflow-x-auto">
+                        <button
+                            onClick={() => setActiveTab("module")}
+                            className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === "module" ? "bg-workbook-dark text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                        >
+                            Module Access
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("summary")}
+                            className={`rounded-full px-4 py-2 text-sm font-semibold ${activeTab === "summary" ? "bg-workbook-dark text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                        >
+                            Access Summary
+                        </button>
+                    </nav>
+                </div>
+
+                {activeTab === "module" ? (
+                    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {moduleItems.map((module) => {
+                            const Icon = module.icon;
+                            const enabled = enabledModules.includes(module.id);
+                            return (
+                                <div key={module.id} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-workbook-dark/10 text-workbook-dark">
+                                                <Icon size={20} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-slate-900">{module.title}</h3>
+                                                <p className="text-sm text-slate-500">{module.features}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => handleToggleModule(module.id)}
+                                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition ${enabled ? "bg-workbook-dark" : "bg-slate-200"}`}
+                                        >
+                                            <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition ${enabled ? "translate-x-7" : "translate-x-1"}`} />
+                                        </button>
+                                    </div>
+                                    <p className="mt-4 text-sm leading-6 text-slate-500">{module.description}</p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
+                            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Enabled Modules</h3>
+                            <p className="mt-3 text-3xl font-bold text-slate-900">{enabledModules.length}</p>
+                            <p className="mt-2 text-sm text-slate-500">Modules currently active for this company.</p>
+                        </div>
+                        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
+                            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Disabled Modules</h3>
+                            <p className="mt-3 text-3xl font-bold text-slate-900">{moduleItems.length - enabledModules.length}</p>
+                            <p className="mt-2 text-sm text-slate-500">Modules currently disabled for this company.</p>
+                        </div>
+                        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
+                            <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Last Updated</h3>
+                            <p className="mt-3 text-3xl font-bold text-slate-900">Today</p>
+                            <p className="mt-2 text-sm text-slate-500">Recent permission changes are saved instantly.</p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-slate-500">Use the toggles to control module access for the selected company.</p>
+                    <button className="inline-flex items-center justify-center rounded-2xl bg-workbook-dark px-6 py-3 text-sm font-semibold text-white transition hover:bg-workbook-light">
+                        Save Changes
+                    </button>
                 </div>
             </div>
         </motion.div>
