@@ -51,6 +51,7 @@ const Companies = () => {
         autoEmailReports: true,
         adminFirstName: "",
         adminLastName: "",
+        industryType: "SOFTWARE",
         adminEmail: "",
         adminPhone: "",
         adminPassword: ""
@@ -157,6 +158,7 @@ const Companies = () => {
                 postalCode: form.postalCode,
                 gstNumber: form.gstNumber,
                 panNumber: form.panNumber,
+                industryType: form.industryType,
                 subscriptionPlan: form.subscriptionPlan,
                 employeeLimit: Number(form.employeeLimit),
                 subscriptionStart: form.subscriptionStart,
@@ -205,6 +207,7 @@ const Companies = () => {
                 gstNumber: "",
                 panNumber: "",
                 subscriptionPlan: "TRIAL",
+                industryType: "SOFTWARE",
                 employeeLimit: 0,
                 subscriptionStart: "",
                 subscriptionEnd: "",
@@ -604,6 +607,20 @@ const Companies = () => {
                                     <option value="BASIC">BASIC</option>
                                     <option value="STANDARD">STANDARD</option>
                                     <option value="PREMIUM">PREMIUM</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Industry Type</label>
+                                <select
+                                    value={form.industryType}
+                                    onChange={(e) => handleChange("industryType", e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
+                                >
+                                    <option value="SOFTWARE">SOFTWARE</option>
+                                    <option value="FINANCE">FINANCE</option>
+                                    <option value="HEALTHCARE">HEALTHCARE</option>
+                                    <option value="EDUCATION">EDUCATION</option>
+                                    <option value="MANUFACTURING">MANUFACTURING</option>
                                 </select>
                             </div>
                             <div className="space-y-2">
