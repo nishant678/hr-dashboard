@@ -5,7 +5,6 @@ import { useAuth } from "../../context/AuthContext";
 import {
     LayoutDashboard,
     Building2,
-    Users,
     CreditCard,
     ArrowLeftRight,
     FileBarChart,
@@ -34,7 +33,7 @@ const Sidebar = ({ isOpen, toggle }) => {
     const menuItems = [
         { name: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/" },
         { name: "Companies", icon: <Building2 size={20} />, path: "/companies" },
-        { name: "Users", icon: <Users size={20} />, path: "/users" },
+
         { name: "Subscriptions", icon: <CreditCard size={20} />, path: "/subscriptions" },
         { name: "Transactions", icon: <ArrowLeftRight size={20} />, path: "/transactions" },
         { name: "Reports", icon: <FileBarChart size={20} />, path: "/reports" },

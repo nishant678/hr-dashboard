@@ -26,6 +26,8 @@ const Companies = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState("");
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState("");
     const [form, setForm] = useState({
         companyName: "",
         ownerName: "",
@@ -150,7 +152,7 @@ const Companies = () => {
                 email: form.email,
                 phone: form.phone,
                 website: form.website,
-                logoUrl: form.logoUrl,
+                logoUrl: logoFile ? "" : form.logoUrl,
                 address: buildAddress(),
                 city: form.city,
                 state: form.state,
@@ -174,6 +176,22 @@ const Companies = () => {
                 adminPassword: form.adminPassword
             };
 
+            if (logoFile) {
+                const base64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result?.split(",")[1] || "");
+                    reader.readAsDataURL(logoFile);
+                });
+                const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_IMGBB_KEY || "YOUR_IMGBB_API_KEY"}`, {
+                    method: "POST",
+                    body: new URLSearchParams({ image: base64 })
+                });
+                if (imgbbRes.ok) {
+                    const imgData = await imgbbRes.json();
+                    payload.logoUrl = imgData.data?.url || imgData.data?.display_url || "";
+                }
+            }
+
             const response = await fetch(withBase("/api/super-admin/create-companies"), {
                 method: "POST",
                 headers: {
@@ -190,6 +208,8 @@ const Companies = () => {
 
             await fetchCompanies();
             setIsModalOpen(false);
+            setLogoFile(null);
+            setLogoPreview("");
             setForm(prev => ({
                 ...prev,
                 companyName: "",
@@ -427,14 +447,28 @@ const Companies = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Logo URL</label>
-                                <input
-                                    value={form.logoUrl}
-                                    onChange={(e) => handleChange("logoUrl", e.target.value)}
-                                    type="url"
-                                    placeholder="Enter logo URL"
-                                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all font-medium text-slate-700"
-                                />
+                                <label className="text-sm font-bold text-slate-700">Company Logo</label>
+                                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all">
+                                    {logoPreview ? (
+                                        <img src={logoPreview} alt="Preview" className="h-28 object-contain p-2" />
+                                    ) : (
+                                        <div className="flex flex-col items-center gap-1 text-slate-400">
+                                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                            <span className="text-xs">Click to upload logo</span>
+                                        </div>
+                                    )}
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setLogoFile(file);
+                                            setLogoPreview(URL.createObjectURL(file));
+                                            handleChange("logoUrl", "");
+                                        }
+                                    }} />
+                                </label>
+                                {logoPreview && (
+                                    <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(""); handleChange("logoUrl", ""); }} className="text-xs text-red-500 hover:underline">Remove</button>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700">GST Number</label>
