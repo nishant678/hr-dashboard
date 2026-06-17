@@ -10,7 +10,10 @@ import {
     Mail,
     Users as UsersIcon,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Pencil,
+    Eye,
+    X
 } from "lucide-react";
 import Modal from "../../../components/common/Modal";
 import { useHeader } from "../../../context/HeaderContext";
@@ -21,6 +24,9 @@ const Companies = () => {
     const { setHeaderData } = useHeader();
     const { token } = useAuth();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingCompany, setEditingCompany] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [detailCompany, setDetailCompany] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [companies, setCompanies] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -90,7 +96,7 @@ const Companies = () => {
             description: "Manage all registered companies in the system.",
             actions: (
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => { setEditingCompany(null); setLogoFile(null); setLogoPreview(""); setForm(prev => ({ ...prev, logoUrl: "" })); setIsModalOpen(true); }}
                     className="flex items-center justify-center gap-2 bg-workbook-dark hover:bg-workbook-light text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-lg active:scale-95" style={{ boxShadow: '0 4px 12px rgba(31, 71, 136, 0.3)' }}
                 >
                     <Plus size={18} />
@@ -113,6 +119,42 @@ const Companies = () => {
 
     const handleChange = (key, value) => {
         setForm(prev => ({ ...prev, [key]: value }));
+    };
+
+    const openEdit = (company) => {
+        setEditingCompany(company);
+        setForm({
+            companyName: company.companyName || company.name || "",
+            ownerName: company.ownerName || "",
+            email: company.email || "",
+            phone: company.phone || "",
+            website: company.website || "",
+            logoUrl: company.logoUrl || "",
+            addressLine1: company.address || "",
+            addressLine2: "",
+            city: company.city || "",
+            state: company.state || "",
+            country: company.country || "",
+            postalCode: company.postalCode || "",
+            gstNumber: company.gstNumber || "",
+            panNumber: company.panNumber || "",
+            subscriptionPlan: company.subscriptionPlan || "TRIAL",
+            employeeLimit: company.employeeLimit ?? 0,
+            subscriptionStart: company.subscriptionStart || "",
+            subscriptionEnd: company.subscriptionEnd || "",
+            timezone: company.timezone || "(GMT+05:30) Asia/Kolkata",
+            currency: company.currency || "INR",
+            attendanceMandatory: company.attendanceMandatory ?? true,
+            autoEmailReports: company.autoEmailReports ?? true,
+            adminFirstName: company.adminFirstName || "",
+            adminLastName: company.adminLastName || "",
+            industryType: company.industryType || "SOFTWARE",
+            adminEmail: company.adminEmail || "",
+            adminPhone: company.adminPhone || "",
+            adminPassword: ""
+        });
+        setLogoPreview(company.logoUrl || "");
+        setIsModalOpen(true);
     };
 
     const parseApiError = async (response) => {
@@ -192,8 +234,13 @@ const Companies = () => {
                 }
             }
 
-            const response = await fetch(withBase("/api/super-admin/create-companies"), {
-                method: "POST",
+            const isEdit = !!editingCompany;
+            const url = isEdit
+                ? withBase(`/api/super-admin/companies/${editingCompany.id}`)
+                : withBase("/api/super-admin/create-companies");
+
+            const response = await fetch(url, {
+                method: isEdit ? "PUT" : "POST",
                 headers: {
                     "Content-Type": "application/json",
                     ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -203,11 +250,12 @@ const Companies = () => {
 
             if (!response.ok) {
                 const message = await parseApiError(response);
-                throw new Error(message || "Failed to create company");
+                throw new Error(message || `Failed to ${isEdit ? 'update' : 'create'} company`);
             }
 
             await fetchCompanies();
             setIsModalOpen(false);
+            setEditingCompany(null);
             setLogoFile(null);
             setLogoPreview("");
             setForm(prev => ({
@@ -343,9 +391,14 @@ const Companies = () => {
                                             </td>
                                             <td className="px-6 py-4 text-slate-500">{date}</td>
                                             <td className="px-6 py-4 text-right">
-                                                <button className="p-2 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200">
-                                                    <MoreHorizontal size={16} className="text-slate-400" />
-                                                </button>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button onClick={() => { setDetailCompany(company); setShowDetailModal(true); }} className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-slate-400 hover:text-blue-600" title="View Details">
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button onClick={() => openEdit(company)} className="p-2 hover:bg-amber-50 rounded-lg transition-colors text-slate-400 hover:text-amber-600" title="Edit Company">
+                                                        <Pencil size={16} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -378,17 +431,17 @@ const Companies = () => {
                 </div>
             </div>
 
-            {/* Add Company Modal */}
+            {/* Add / Edit Company Modal */}
             <Modal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="Add New Company"
+                onClose={() => { setIsModalOpen(false); setEditingCompany(null); }}
+                title={editingCompany ? "Edit Company" : "Add New Company"}
                 size="xl"
             >
                 <form className="space-y-6 max-h-[70vh] overflow-y-auto" onSubmit={handleSubmit}>
                     {submitError && (
                         <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3">
-                            <p className="font-semibold">Unable to create company</p>
+                            <p className="font-semibold">{editingCompany ? "Unable to update company" : "Unable to create company"}</p>
                             <p className="text-sm mt-1 whitespace-pre-wrap">{submitError}</p>
                         </div>
                     )}
@@ -758,10 +811,98 @@ const Companies = () => {
                             className={`flex-1 px-4 py-3 text-white font-bold rounded-xl shadow-lg transition-all active:scale-95 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-workbook-dark hover:bg-workbook-light'}`}
                             style={!isSubmitting ? { boxShadow: '0 4px 12px rgba(31, 71, 136, 0.3)' } : {}}
                         >
-                            {isSubmitting ? 'Saving...' : 'Save Company'}
+                            {isSubmitting ? 'Saving...' : editingCompany ? 'Update Company' : 'Save Company'}
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Company Detail Modal */}
+            <Modal isOpen={showDetailModal} onClose={() => { setShowDetailModal(false); setDetailCompany(null); }} title="Company Details" size="lg">
+                {detailCompany && (
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
+                            <div className="w-14 h-14 rounded-xl bg-workbook-dark/10 text-workbook-dark flex items-center justify-center text-xl font-bold">
+                                {(detailCompany.companyName || detailCompany.name || "?").charAt(0)}
+                            </div>
+                            <div>
+                                <h4 className="text-xl font-bold text-slate-800">{detailCompany.companyName || detailCompany.name}</h4>
+                                <p className="text-sm text-slate-500">{detailCompany.industryType || "—"}</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-6">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Owner</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.ownerName || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.email || detailCompany.adminEmail || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Phone</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.phone || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Website</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.website || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Address</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.address || `${detailCompany.city || ""}, ${detailCompany.state || ""}, ${detailCompany.country || ""}` || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Postal Code</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.postalCode || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">GST Number</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.gstNumber || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">PAN Number</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.panNumber || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Subscription Plan</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.subscriptionPlan || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Employee Limit</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.employeeLimit ?? "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Status</p>
+                                <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(detailCompany.status)}`}>{detailCompany.status || "Active"}</span>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Timezone</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.timezone || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Subscription Start</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.subscriptionStart || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Subscription End</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.subscriptionEnd || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Currency</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.currency || "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Attendance Mandatory</p>
+                                <p className="text-sm font-medium text-slate-700">{detailCompany.attendanceMandatory ? "Yes" : "No"}</p>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-100 flex justify-end">
+                            <button onClick={() => { setShowDetailModal(false); setDetailCompany(null); }} className="px-6 py-2.5 bg-workbook-dark text-white rounded-xl font-medium hover:bg-workbook-light transition-all shadow-lg" style={{ boxShadow: '0 4px 12px rgba(31, 71, 136, 0.3)' }}>Close</button>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </motion.div>
     );
