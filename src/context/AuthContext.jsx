@@ -69,7 +69,8 @@ export function AuthProvider({ children }) {
         email: data.email || email,
         role: normalizeRole(data.role),
         name: data.name || data.email || "User",
-        token: data.token || null
+        token: data.token || null,
+        companyId: data.companyId || null
       };
 
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
@@ -108,7 +109,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token: user?.token, login, logout, register }}>
+    <AuthContext.Provider value={{ user, token: user?.token, companyId: user?.companyId, login, logout, register }}>
       {children}
     </AuthContext.Provider>
   );

@@ -15,7 +15,7 @@ const emptyForm = {
 };
 
 const Employees = () => {
-    const { token } = useAuth();
+    const { token, companyId } = useAuth();
     const [employees, setEmployees] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [designations, setDesignations] = useState([]);
@@ -41,20 +41,21 @@ const Employees = () => {
     }, [token]);
 
     const fetchDropdowns = useCallback(async () => {
+        if (!token || !companyId) return;
         try {
             const [deptRes, desigRes, roleRes] = await Promise.all([
-                fetch(withBase("/api/departments"), { headers }),
-                fetch(withBase("/api/designations"), { headers }),
-                fetch(withBase("/api/roles"), { headers })
+                fetch(withBase(`/api/departments/company/${companyId}`), { headers }),
+                fetch(withBase(`/api/designations/company/${companyId}`), { headers }),
+                fetch(withBase(`/api/roles/company/${companyId}`), { headers })
             ]);
-            const deptJson = await deptRes.json();
-            const desigJson = await desigRes.json();
-            const roleJson = await roleRes.json();
-            setDepartments(deptJson.data?.content || deptJson.data || []);
-            setDesignations(desigJson.data?.content || desigJson.data || []);
-            setRoles(roleJson.data?.content || roleJson.data || []);
+            const deptJson = deptRes.ok ? await deptRes.json() : { data: [] };
+            const desigJson = desigRes.ok ? await desigRes.json() : { data: [] };
+            const roleJson = roleRes.ok ? await roleRes.json() : { data: [] };
+            setDepartments(deptJson.data || []);
+            setDesignations(desigJson.data || []);
+            setRoles(roleJson.data || []);
         } catch { /* fallback */ }
-    }, [token]);
+    }, [token, companyId]);
 
     useEffect(() => { fetchEmployees(); fetchDropdowns(); }, [fetchEmployees, fetchDropdowns]);
 

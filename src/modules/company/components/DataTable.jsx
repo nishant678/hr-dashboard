@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Loader2 } from "lucide-react";
 
 const DataTable = ({ 
     columns, 
@@ -7,7 +7,8 @@ const DataTable = ({
     onRowClick,
     onAction,
     pagination = true,
-    pageSize = 10
+    pageSize = 10,
+    loading = false
 }) => {
     const [currentPage, setCurrentPage] = React.useState(1);
 
@@ -36,7 +37,19 @@ const DataTable = ({
                         </tr>
                     </thead>
                     <tbody>
-                        {paginatedData.map((row, rowIdx) => (
+                        {loading ? (
+                            <tr>
+                                <td colSpan={columns.length + (onAction ? 1 : 0)} className="px-6 py-12 text-center text-slate-400">
+                                    <Loader2 size={24} className="animate-spin inline-block mr-2" /> Loading...
+                                </td>
+                            </tr>
+                        ) : paginatedData.length === 0 ? (
+                            <tr>
+                                <td colSpan={columns.length + (onAction ? 1 : 0)} className="px-6 py-12 text-center text-slate-400">
+                                    No data found
+                                </td>
+                            </tr>
+                        ) : (paginatedData.map((row, rowIdx) => (
                             <tr
                                 key={rowIdx}
                                 className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group"
@@ -67,13 +80,13 @@ const DataTable = ({
                                     </td>
                                 )}
                             </tr>
-                        ))}
+                        )))}
                     </tbody>
                 </table>
             </div>
 
             {/* Pagination */}
-            {pagination && totalPages > 1 && (
+            {pagination && totalPages > 1 && !loading && (
                 <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
                     <p className="text-sm text-slate-500">
                         Showing {startIndex + 1} to {Math.min(endIndex, data.length)} of {data.length} results
