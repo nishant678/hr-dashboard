@@ -167,7 +167,7 @@ const Employees = () => {
 
             <DataTable columns={columns} data={filtered} pagination={true} pageSize={10} />
 
-            <AddEmployeeModal isOpen={showAddForm} onClose={() => setShowAddForm(false)} departments={deptOptions} designations={desigOptions} token={token} onSuccess={fetchEmployees} />
+            <AddEmployeeModal isOpen={showAddForm} onClose={() => setShowAddForm(false)} token={token} onSuccess={fetchEmployees} />
 
             <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={editingId ? "Edit Employee" : "Add New Employee"} size="lg">
                 <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-2 gap-5">

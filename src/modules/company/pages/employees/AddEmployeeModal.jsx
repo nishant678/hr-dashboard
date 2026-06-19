@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Plus, Trash2 } from "lucide-react";
 import { withBase } from "../../../../config/apiConfig";
@@ -36,9 +36,34 @@ const SectionGrid = ({ children }) => (
     </div>
 );
 
-const AddEmployeeModal = ({ isOpen, onClose, departments = [], designations = [], token, onSuccess }) => {
+const AddEmployeeModal = ({ isOpen, onClose, token, onSuccess }) => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [departments, setDepartments] = useState([]);
+    const [designations, setDesignations] = useState([]);
+
+    const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
+
+    useEffect(() => {
+        if (!isOpen || !token) return;
+        const fetchOptions = async () => {
+            try {
+                const [deptRes, desigRes] = await Promise.all([
+                    fetch(withBase("/api/departments?page=0&size=1000"), { headers }),
+                    fetch(withBase("/api/designations?page=0&size=1000"), { headers })
+                ]);
+                if (deptRes.ok) {
+                    const json = await deptRes.json();
+                    setDepartments(json.data?.content || json.data || []);
+                }
+                if (desigRes.ok) {
+                    const json = await desigRes.json();
+                    setDesignations(json.data?.content || json.data || []);
+                }
+            } catch { /* silent fallback */ }
+        };
+        fetchOptions();
+    }, [isOpen, token]);
     const [documents, setDocuments] = useState([{ type: "", file: null }]);
 
     const [form, setForm] = useState({
@@ -61,7 +86,6 @@ const AddEmployeeModal = ({ isOpen, onClose, departments = [], designations = []
         setSubmitting(true);
         setError("");
         try {
-            const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
             const body = {
                 firstName: form.firstName, middleName: form.middleName, lastName: form.lastName,
                 employeeId: form.employeeId, dateOfBirth: form.dateOfBirth || null,
