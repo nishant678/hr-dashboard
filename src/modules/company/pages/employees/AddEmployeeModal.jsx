@@ -120,7 +120,7 @@ const AddEmployeeModal = ({ isOpen, onClose, token, onSuccess }) => {
             const res = await fetch(withBase("/api/company-admin/users"), {
                 method: "POST", headers, body: JSON.stringify(body)
             });
-            if (!res.ok) { const err = await res.json(); throw new Error(err.message || "Failed to save employee"); }
+            if (!res.ok) { const err = await res.json().catch(() => null); throw new Error(err?.message || err?.error || "Failed to save employee"); }
             onSuccess && onSuccess();
             onClose();
         } catch (err) { setError(err.message); }
@@ -184,6 +184,8 @@ const AddEmployeeModal = ({ isOpen, onClose, token, onSuccess }) => {
                                                 <Field label="PAN Number" type="text" name="panNumber" value={form.panNumber} onChange={handleChange} placeholder="ABCDE1234F" />
                                                 <Field label="Aadhaar Number" type="text" name="aadhaarNumber" value={form.aadhaarNumber} onChange={handleChange} placeholder="XXXX XXXX XXXX" />
                                                 <Field label="Passport Number" type="text" name="passportNumber" value={form.passportNumber} onChange={handleChange} placeholder="Z1234567" />
+                                                <Field label="Email" required type="email" name="email" value={form.email} onChange={handleChange} placeholder="john.doe@company.com" />
+                                                <Field label="Phone" type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="+91 9876543210" />
                                             </SectionGrid>
                                         </div>
                                         <div className="lg:col-span-1">
