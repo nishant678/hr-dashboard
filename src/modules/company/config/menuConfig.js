@@ -32,12 +32,7 @@ export const companyMenuItems = [
         name: "Employees",
         icon: Users,
         path: "/company/employees",
-        description: "Manage Team Members",
-        subMenu: [
-            { name: "All Employees", path: "/company/employees" },
-            { name: "Add Employee", path: "/company/employees/add" },
-            { name: "Directory", path: "/company/employees/directory" }
-        ]
+        description: "Manage Team Members"
     },
     {
         name: "Departments",
