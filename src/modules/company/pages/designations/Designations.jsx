@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import { Edit3, Trash2 } from "lucide-react";
 import PageHeader from "../../components/PageHeader";
 import DataTable from "../../components/DataTable";
 import StatusBadge from "../../components/StatusBadge";
@@ -8,44 +9,51 @@ import { useAuth } from "../../../../context/AuthContext";
 import { withBase } from "../../../../config/apiConfig";
 
 const Designations = () => {
-    const { token, companyId } = useAuth();
-    const [searchTerm, setSearchTerm] = useState("");
+    const { token } = useAuth();
     const [designations, setDesignations] = useState([]);
     const [departments, setDepartments] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingDesignation, setEditingDesignation] = useState(null);
     const [designationForm, setDesignationForm] = useState({ name: "", description: "", departmentId: "" });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fetchError, setFetchError] = useState("");
+    const [loading, setLoading] = useState(true);
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deletingDesignation, setDeletingDesignation] = useState(null);
 
     const headers = { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) };
 
     const fetchDesignations = useCallback(async () => {
-        if (!token || !companyId) return;
+        if (!token) return;
         setFetchError("");
         try {
-            const res = await fetch(withBase(`/api/designations/company/${companyId}`), { headers });
+            const res = await fetch(withBase("/api/designations?page=0&size=1000"), { headers });
             if (!res.ok) {
                 const err = await res.json().catch(() => null);
                 throw new Error(err?.error || err?.message || `HTTP ${res.status}`);
             }
             const json = await res.json();
-            setDesignations(json.data || []);
+            setDesignations(json.data?.content || json.data || []);
         } catch (error) {
             setFetchError(error.message || "Failed to fetch designations");
+        } finally {
+            setLoading(false);
         }
-    }, [token, companyId]);
+    }, [token]);
 
     const fetchDepartments = useCallback(async () => {
-        if (!token || !companyId) return;
+        if (!token) return;
         try {
-            const res = await fetch(withBase(`/api/departments/company/${companyId}`), { headers });
+            const res = await fetch(withBase("/api/departments?page=0&size=1000"), { headers });
             if (!res.ok) return;
             const json = await res.json();
-            setDepartments(json.data || []);
-        } catch (error) {
-            console.error("Failed to fetch departments", error);
+            setDepartments(json.data?.content || json.data || []);
+        } catch {
+            // silent fallback
         }
-    }, [token, companyId]);
+    }, [token]);
 
     useEffect(() => {
         fetchDesignations();
@@ -53,6 +61,89 @@ const Designations = () => {
     }, [fetchDesignations, fetchDepartments]);
 
     const deptMap = Object.fromEntries(departments.map(d => [d.id, d.name]));
+
+    const handleAdd = () => {
+        setEditingDesignation(null);
+        setDesignationForm({ name: "", description: "", departmentId: "" });
+        setIsModalOpen(true);
+    };
+
+    const handleEdit = (desig) => {
+        setEditingDesignation(desig);
+        setDesignationForm({
+            name: desig.name || "",
+            description: desig.description || "",
+            departmentId: desig.departmentId ?? ""
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteClick = (desig) => {
+        setDeletingDesignation(desig);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleModalClose = () => {
+        setIsModalOpen(false);
+        setEditingDesignation(null);
+        setDesignationForm({ name: "", description: "", departmentId: "" });
+    };
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+        if (!designationForm.name.trim() || !designationForm.departmentId || isSubmitting) return;
+        setIsSubmitting(true);
+        setFetchError("");
+        try {
+            const url = editingDesignation
+                ? withBase(`/api/designations/${editingDesignation.id}`)
+                : withBase("/api/designations");
+            const method = editingDesignation ? "PUT" : "POST";
+
+            const res = await fetch(url, {
+                method,
+                headers,
+                body: JSON.stringify({
+                    name: designationForm.name,
+                    description: designationForm.description,
+                    departmentId: Number(designationForm.departmentId)
+                })
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => null);
+                throw new Error(err?.message || "Failed to save designation");
+            }
+            handleModalClose();
+            fetchDesignations();
+        } catch (error) {
+            setFetchError(error.message || "Failed to save designation");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deletingDesignation || isSubmitting) return;
+        setIsSubmitting(true);
+        setFetchError("");
+        try {
+            const res = await fetch(withBase(`/api/designations/${deletingDesignation.id}`), {
+                method: "DELETE",
+                headers
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => null);
+                throw new Error(err?.message || "Failed to delete designation");
+            }
+            setIsDeleteModalOpen(false);
+            setDeletingDesignation(null);
+            fetchDesignations();
+        } catch (error) {
+            setFetchError(error.message || "Failed to delete designation");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     const filtered = designations.filter(item =>
         (item.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -70,44 +161,23 @@ const Designations = () => {
         {
             key: "active", label: "Status", width: "100px",
             render: (value) => <StatusBadge status={value ? "Active" : "Inactive"} variant={value ? "active" : "inactive"} />
+        },
+        {
+            key: "actions", label: "Actions", width: "120px",
+            render: (_, row) => (
+                <div className="flex items-center gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
+                        className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-blue-600 hover:text-blue-700">
+                        <Edit3 size={16} />
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-500 hover:text-red-600">
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )
         }
     ];
-
-    const handleAdd = () => setIsModalOpen(true);
-
-    const handleModalClose = () => {
-        setIsModalOpen(false);
-        setDesignationForm({ name: "", description: "", departmentId: "" });
-        setFetchError("");
-    };
-
-    const handleCreateDesignation = async (e) => {
-        e.preventDefault();
-        if (!designationForm.name.trim() || !designationForm.departmentId || isSubmitting) return;
-        setIsSubmitting(true);
-        setFetchError("");
-        try {
-            const res = await fetch(withBase("/api/designations"), {
-                method: "POST",
-                headers,
-                body: JSON.stringify({
-                    name: designationForm.name,
-                    description: designationForm.description,
-                    departmentId: Number(designationForm.departmentId)
-                })
-            });
-            if (!res.ok) {
-                const err = await res.json().catch(() => null);
-                throw new Error(err?.message || "Failed to create designation");
-            }
-            handleModalClose();
-            fetchDesignations();
-        } catch (error) {
-            setFetchError(error.message || "Failed to create designation");
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -126,10 +196,11 @@ const Designations = () => {
                 </div>
             </div>
 
-            <DataTable columns={columns} data={filtered} pagination={true} pageSize={8} />
+            <DataTable columns={columns} data={filtered} pagination={true} pageSize={10} loading={loading} />
 
-            <Modal isOpen={isModalOpen} onClose={handleModalClose} title="Add Designation" size="md">
-                <form className="space-y-6" onSubmit={handleCreateDesignation}>
+            {/* Add/Edit Modal */}
+            <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingDesignation ? "Edit Designation" : "Add Designation"} size="md">
+                <form className="space-y-6" onSubmit={handleSave}>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Department</label>
                         <select value={designationForm.departmentId}
@@ -155,15 +226,32 @@ const Designations = () => {
                             className="w-full border border-slate-200 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-workbook-dark/20 h-28 resize-none"
                             placeholder="Enter a description for this designation" />
                     </div>
-                    <div className="flex justify-end gap-3">
+                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
                         <button type="button" onClick={handleModalClose}
                             className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                         <button type="submit" disabled={isSubmitting}
-                            className="rounded-2xl bg-workbook-dark px-6 py-3 text-sm text-white hover:bg-workbook-light transition-all disabled:opacity-50">
-                            {isSubmitting ? "Saving..." : "Save Designation"}
+                            className={`rounded-2xl px-6 py-3 text-sm text-white transition-all ${isSubmitting ? "bg-slate-400 cursor-not-allowed" : "bg-workbook-dark hover:bg-workbook-light"}`}>
+                            {isSubmitting ? "Saving..." : editingDesignation ? "Update Designation" : "Save Designation"}
                         </button>
                     </div>
                 </form>
+            </Modal>
+
+            {/* Delete Confirmation Modal */}
+            <Modal isOpen={isDeleteModalOpen} onClose={() => { setIsDeleteModalOpen(false); setDeletingDesignation(null); }} title="Delete Designation" size="sm">
+                <div className="space-y-6">
+                    <p className="text-slate-600">
+                        Are you sure you want to delete <strong className="text-slate-800">{deletingDesignation?.name}</strong>? This action cannot be undone.
+                    </p>
+                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                        <button type="button" onClick={() => { setIsDeleteModalOpen(false); setDeletingDesignation(null); }}
+                            className="px-4 py-3 text-slate-700 bg-slate-100 rounded-2xl hover:bg-slate-200 transition-all">Cancel</button>
+                        <button onClick={handleDelete} disabled={isSubmitting}
+                            className={`px-5 py-3 rounded-2xl text-white transition-all ${isSubmitting ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}`}>
+                            {isSubmitting ? "Deleting..." : "Delete"}
+                        </button>
+                    </div>
+                </div>
             </Modal>
         </motion.div>
     );
