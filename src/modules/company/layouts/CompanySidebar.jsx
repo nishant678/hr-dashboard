@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, LogOut } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { companyMenuItems } from "../config/menuConfig";
+import useCompany from "../hooks/useCompany";
 import workBookLogo from "../../../assets/work_book_web_logo.png";
 
 const CompanySidebar = ({ isOpen, toggle }) => {
@@ -11,6 +12,7 @@ const CompanySidebar = ({ isOpen, toggle }) => {
     const [expandedItems, setExpandedItems] = React.useState({});
     const navigate = useNavigate();
     const { logout } = useAuth();
+    const { company } = useCompany();
 
     const handleLogout = () => {
         logout();
@@ -139,7 +141,7 @@ const CompanySidebar = ({ isOpen, toggle }) => {
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <p className="font-semibold text-sm truncate">Company Admin</p>
-                            <p className="text-xs text-slate-500 truncate">Acme Corporation</p>
+                            <p className="text-xs text-slate-500 truncate">{company?.companyName || "—"}</p>
                         </div>
                     </div>
 

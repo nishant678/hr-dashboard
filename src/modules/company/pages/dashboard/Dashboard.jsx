@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Users, Building2, Clock, TrendingUp, AlertCircle, CheckCircle } from "lucide-react";
+import { Users, Building2, Clock, TrendingUp, AlertCircle, CheckCircle, Mail, Shield } from "lucide-react";
 import CompanyStatsCard from "../../components/CompanyStatsCard";
 import PageHeader from "../../components/PageHeader";
 import { useAuth } from "../../../../context/AuthContext";
 import { withBase } from "../../../../config/apiConfig";
+import useCompany from "../../hooks/useCompany";
 
 const container = {
     hidden: { opacity: 0 },
@@ -13,7 +14,8 @@ const container = {
 const item = { hidden: { y: 20, opacity: 0 }, show: { y: 0, opacity: 1 } };
 
 const CompanyDashboard = () => {
-    const { token, companyId } = useAuth();
+    const { token } = useAuth();
+    const { company, loading: companyLoading } = useCompany();
     const [stats, setStats] = useState({ employees: 0, departments: 0 });
     const [loading, setLoading] = useState(true);
 
@@ -43,7 +45,37 @@ const CompanyDashboard = () => {
 
     return (
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
-            <PageHeader title="Dashboard" description="Welcome to your Company Admin Portal" showActions={false} />
+            <PageHeader title="Dashboard" description={`Welcome, ${company?.companyName || "Company Admin"}`} showActions={false} />
+
+            {company && (
+                <motion.div variants={item} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                    <div className="flex flex-wrap items-center gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-xl bg-workbook-dark/10 flex items-center justify-center">
+                                <Building2 size={28} className="text-workbook-dark" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800">{company.companyName}</h2>
+                                <p className="text-sm text-slate-500">{company.industryType || "—"}</p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-6 ml-auto">
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <Mail size={16} className="text-slate-400" />
+                                <span>{company.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <Shield size={16} className="text-slate-400" />
+                                <span className="capitalize">{company.subscriptionPlan || "—"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <Users size={16} className="text-slate-400" />
+                                <span>{company.employeeLimit || 0} employee limit</span>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <CompanyStatsCard title="Total Employees" value={stats.employees} change="Live" isUp={true} icon={Users} color="bg-workbook-dark/10 text-workbook-dark" />

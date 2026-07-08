@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Bell, Menu, ChevronDown, LogOut, Settings, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../../context/AuthContext";
+import useCompany from "../hooks/useCompany";
 
-const CompanyNavbar = ({ toggle, companyName = "Acme Corporation" }) => {
+const CompanyNavbar = ({ toggle }) => {
     const [isProfileOpen, setIsProfileOpen] = React.useState(false);
     const navigate = useNavigate();
     const { logout } = useAuth();
+    const { company } = useCompany();
 
     const handleLogout = () => {
         logout();
@@ -27,8 +29,8 @@ const CompanyNavbar = ({ toggle, companyName = "Acme Corporation" }) => {
 
                 {/* Company Info */}
                 <div className="hidden sm:block">
-                    <h1 className="text-2xl font-bold text-slate-800 leading-none">{companyName}</h1>
-                    <p className="text-sm text-slate-500 mt-1.5 font-medium">Company Admin Dashboard</p>
+                    <h1 className="text-2xl font-bold text-slate-800 leading-none">{company?.companyName || "Dashboard"}</h1>
+                    <p className="text-sm text-slate-500 mt-1.5 font-medium">{company?.industryType || "Company Admin Dashboard"}</p>
                 </div>
             </div>
 
@@ -76,7 +78,7 @@ const CompanyNavbar = ({ toggle, companyName = "Acme Corporation" }) => {
                             >
                                 <div className="p-4 border-b border-slate-100">
                                     <p className="font-semibold text-slate-800">Company Admin</p>
-                                    <p className="text-xs text-slate-500">Acme Corporation</p>
+                                    <p className="text-xs text-slate-500">{company?.companyName || "—"}</p>
                                 </div>
 
                                 <div className="p-2 space-y-1">
