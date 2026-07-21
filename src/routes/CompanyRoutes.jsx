@@ -11,8 +11,7 @@ import BulkAttendance from "../modules/company/pages/attendance/BulkAttendance";
 import AttendanceApproval from "../modules/company/pages/attendance/AttendanceApproval";
 import AttendanceReports from "../modules/company/pages/attendance/AttendanceReports";
 import Leave from "../modules/company/pages/leave/Leave";
-import LeaveApproval from "../modules/company/pages/leave/LeaveApproval";
-import LeaveCalendar from "../modules/company/pages/leave/LeaveCalendar";
+import Expense from "../modules/company/pages/expense/Expense";
 import Holidays from "../modules/company/pages/holidays/Holidays";
 import Shifts from "../modules/company/pages/shifts/Shifts";
 import Payroll from "../modules/company/pages/payroll/Payroll";
@@ -44,8 +43,9 @@ const CompanyRoutes = () => {
             <Route path="attendance/approval" element={<AttendanceApproval />} />
             <Route path="attendance/reports" element={<AttendanceReports />} />
             <Route path="leave" element={<Leave />} />
-            <Route path="leave/approval" element={<LeaveApproval />} />
-            <Route path="leave/calendar" element={<LeaveCalendar />} />
+            <Route path="leave/approval" element={<Navigate to="/company/leave" replace />} />
+            <Route path="leave/calendar" element={<Navigate to="/company/leave" replace />} />
+            <Route path="expenses" element={<Expense />} />
             <Route path="holidays" element={<Holidays />} />
             <Route path="shifts" element={<Shifts />} />
             <Route path="payroll" element={<Payroll />} />

@@ -62,13 +62,13 @@ export const companyMenuItems = [
         name: "Leave Management",
         icon: Calendar,
         path: "/company/leave",
-        description: "Leave Requests",
-        subMenu: [
-            { name: "Leave Requests", path: "/company/leave" },
-            { name: "Approval", path: "/company/leave/approval" },
-            { name: "Leave Calendar", path: "/company/leave/calendar" },
-            { name: "Holidays", path: "/company/holidays" }
-        ]
+        description: "Leave Requests & Approvals"
+    },
+    {
+        name: "Expenses",
+        icon: DollarSign,
+        path: "/company/expenses",
+        description: "Expense Claims & Reimbursements"
     },
     {
         name: "Holidays",
